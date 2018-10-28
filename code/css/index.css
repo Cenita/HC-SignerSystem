@@ -1,0 +1,92 @@
+body
+{
+}
+th
+{
+    text-align: center;
+}
+#title
+{
+    font-size: 30px;
+    margin: auto;
+    margin-top: 40px;
+    height: 70px;
+    margin-bottom: 20px;
+}
+button{
+    outline:none;
+}
+button#sign
+{
+    outline:0 none !important; blr:expression(this.onFocus=this.blur());
+    width: 150px;
+    height: 150px;
+    border-radius: 100%;
+    color: white;
+    font-size: 30px;
+    background-color: #70d3ff;
+    border: 0px;
+}
+.signed
+{
+    background-color: #65b85c !important;
+}
+button#sign:hover
+{
+    transition: background-color 200ms;
+    background-color: #5eb2d4;
+}
+.yes
+{
+    color: #364c0a;
+}
+.no
+{
+    color: #ab302e;
+}
+.title
+{
+    padding-left: 5px;
+    height: 40px;
+    line-height: 40px;
+    width: 100px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #3cbbaf;
+}
+.content .time
+{
+    color: #9a989c;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    border-radius: 10px;
+    border: 1px dashed dodgerblue;
+}
+.backIndex
+{
+    line-height: 50px;
+    font-size: 15px;
+    margin-left: 20px;
+    color: #9c9c9c;
+    text-decoration: none;
+}
+.backIndex:hover
+{
+    color: #a6e1ec;
+    text-decoration: none;
+}
+.content
+{
+    list-style: none;
+}
+li
+{
+
+    list-style: none;
+}
+.name
+{
+    margin-right: 10px;
+    line-height: 50px;
+    color: #9c9c9c;
+    font-size: 16px;
+}
