@@ -570,7 +570,7 @@ checkUser();
 
             $dbh = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
             $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $query = $dbh->prepare("SELECT * FROM  students ORDER BY times DESC");
+            $query = $dbh->prepare("SELECT * FROM  students WHERE times != 0 ORDER BY times DESC");
             $query->execute();
             $data = $query->fetchAll();
 
