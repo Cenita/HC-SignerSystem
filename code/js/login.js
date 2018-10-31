@@ -92,10 +92,6 @@ $(
                             hideRegister();
                             showLogin();
                         }
-                        else
-                        {
-
-                        }
                     }
                 },
                 error:function () {

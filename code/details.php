@@ -1,28 +1,17 @@
 <?php
 session_start();
-
 require_once(dirname(__DIR__) . '/global_config.php');
 require_once(APP_ROOT_PATH . '/db_config.php');
 require_once(APP_ROOT_PATH . '/code/checkUser.php');
+require_once(APP_ROOT_PATH . '/code/signinfor.php');
 checkUser();
-
 $id = $_GET["id"];
-
 $dbh = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
 $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$query = $dbh->prepare("SELECT * FROM  students WHERE id=$id");
+$query = $dbh->prepare("SELECT * FROM  users WHERE id=$id");
 $query->execute();
 $data = $query->fetchAll();
-
 $_SESSION['spename'] = htmlspecialchars($data[0]['name']);
-$_SESSION['spenotes'] = $data[0]['notes'];
-$_SESSION['spetimes'] = $data[0]['times'];
-
-$count = $_SESSION['count'];
-$notes = $_SESSION['spenotes'];
-$spenowstatus=((int)substr("$notes","$count",1));
-$_SESSION['spenowstatus'] = $spenowstatus;
-
 ?>
 
 <!doctype html>
@@ -83,70 +72,60 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     </td>
                     <td>
                         <?php
-                        $count = $_SESSION['count'];
-                        $notes = $_SESSION['spenotes'];
-
-                        if($_SESSION['classify'] > 5 && $_SESSION['classify'] < 12){
-                            if($_SESSION['spenowstatus'] == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
-                        } else if($_SESSION['classify'] > 11 && $_SESSION['classify'] < 17){
-                            $count = $count - 1;
-                            $laststatus=((int)substr("$notes","$count",1));
-
-                            if($laststatus == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($laststatus == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
-                        } else if($_SESSION['classify'] > 16){
-                            $count = $count - 2;
-                            $lasteststatus=((int)substr("$notes","$count",1));
-
-                            if($lasteststatus == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($lasteststatus == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['ymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['classify'] > 11){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </td>
                     <td>
                         <?php
-                        $count = $_SESSION['count'];
-                        $notes = $_SESSION['spenotes'];
-
-                        if($_SESSION['classify'] > 11 && $_SESSION['classify'] < 17){
-                            if($_SESSION['spenowstatus'] == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
-                        } else if($_SESSION['classify'] > 16){
-                            $count = $count - 1;
-                            $laststatus=((int)substr("$notes","$count",1));
-
-                            if($laststatus == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($laststatus == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
-                        }
-
-                        ?>
-                    </td>
-                    <td>
-                        <?php
-                        if($_SESSION['classify'] > 16){
-                            if($_SESSION['spenowstatus'] == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            } else if($_SESSION['classify'] > 21 && $_SESSION['spenowstatus'] == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['ymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['classify'] > 16){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </td>
                     <td>
                         <?php
-                        echo $_SESSION['spetimes'];
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['ymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['classify'] > 21){
+                            echo '<i class="fa fa-close no">' . "</i>";
+                        }
+                        ?>
+                    </td>
+                    <td>
+                        <?php
+                        try {
+                            $dbh = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
+                            $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                            date_default_timezone_set("Asia/Shanghai");
+                            $monday = strtotime('this week Monday',time());
+                            $nextmonday = strtotime('next monday',time());
+                            $id = htmlspecialchars($_GET['id']);
+                            $sql = "SELECT * FROM signlist WHERE  userid = :id AND time > $monday AND time < $nextmonday";
+                            $stmt = $dbh->prepare($sql);
+                            $stmt->bindParam(':id', $id);
+                            $stmt->execute();
+                            $data = $stmt->fetchAll();
+                            $count = count($data);
+                            echo $count;
+                            $dbh = null;
+                        } catch (PDOException $e) {
+                            print "Error!: " . $e->getMessage() . "<br/>";
+                        }
                         ?>
                     </td>
                 </tr>
@@ -171,46 +150,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周一</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 0) || ($_SESSION['today'] == 0 && $_SESSION['classify'] > 5)){
-                            $count = 0;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 0 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET["id"], $_SESSION['mondayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 1 || ($_SESSION['today'] == 1 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 0) || ($_SESSION['today'] == 0 && $_SESSION['classify'] > 11)){
-                            $count = 1;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 0 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['mondayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 1 || ($_SESSION['today'] == 1 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 0) || ($_SESSION['today'] == 0 && $_SESSION['classify'] > 16)){
-                            $count = 2;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 0 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['mondayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 1 || ($_SESSION['today'] == 1 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
@@ -219,46 +189,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周二</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 1) || ($_SESSION['today'] == 1 && $_SESSION['classify'] > 5)){
-                            $count = 3;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 1 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['tuesdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 2 || ($_SESSION['today'] == 2 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 1) || ($_SESSION['today'] == 1 && $_SESSION['classify'] > 11)){
-                            $count = 4;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 1 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['tuesdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 2 || ($_SESSION['today'] == 2 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 1) || ($_SESSION['today'] == 1 && $_SESSION['classify'] > 16)){
-                            $count = 5;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 1 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['tuesdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 2 || ($_SESSION['today'] == 2 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
@@ -267,46 +228,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周三</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 2) || ($_SESSION['today'] == 2 && $_SESSION['classify'] > 5)){
-                            $count = 6;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 2 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['wednesdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 3 || ($_SESSION['today'] == 3 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 2) || ($_SESSION['today'] == 2 && $_SESSION['classify'] > 11)){
-                            $count = 7;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 2 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['wednesdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 3 || ($_SESSION['today'] == 3 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 2) || ($_SESSION['today'] == 2 && $_SESSION['classify'] > 16)){
-                            $count = 8;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 2 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['wednesdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 3 || ($_SESSION['today'] == 3 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
@@ -315,46 +267,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周四</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 3) || ($_SESSION['today'] == 3 && $_SESSION['classify'] > 5)){
-                            $count = 9;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 3 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['thursdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 4 || ($_SESSION['today'] == 4 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 3) || ($_SESSION['today'] == 3 && $_SESSION['classify'] > 11)){
-                            $count = 10;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 3 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['thursdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 4 || ($_SESSION['today'] == 4 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 3) || ($_SESSION['today'] == 3 && $_SESSION['classify'] > 16)){
-                            $count = 11;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 3 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['thursdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 4 || ($_SESSION['today'] == 4 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
@@ -363,46 +306,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周五</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 4) || ($_SESSION['today'] == 4 && $_SESSION['classify'] > 5)){
-                            $count = 12;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 4 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['fridayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 5 || ($_SESSION['today'] == 5 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 4) || ($_SESSION['today'] == 4 && $_SESSION['classify'] > 11)){
-                            $count = 13;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 4 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['fridayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 5 || ($_SESSION['today'] == 5 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 4) || ($_SESSION['today'] == 4 && $_SESSION['classify'] > 16)){
-                            $count = 14;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 4 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['fridayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 5 || ($_SESSION['today'] == 5 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
@@ -411,46 +345,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周六</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 5) || ($_SESSION['today'] == 5 && $_SESSION['classify'] > 5)){
-                            $count = 15;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 5 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['saturdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 6 || ($_SESSION['today'] == 6 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 5) || ($_SESSION['today'] == 5 && $_SESSION['classify'] > 11)){
-                            $count = 16;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 5 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['saturdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 6 || ($_SESSION['today'] == 6 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 5) || ($_SESSION['today'] == 5 && $_SESSION['classify'] > 16)){
-                            $count = 17 ;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 5 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['saturdayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 6 || ($_SESSION['today'] == 6 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
@@ -459,46 +384,37 @@ $_SESSION['spenowstatus'] = $spenowstatus;
                     <th>周日</th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 6) || ($_SESSION['today'] == 6 && $_SESSION['classify'] > 5)){
-                            $count = 18;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 6 && $status == 1) || $_SESSION['classify'] > 11 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "08:00:00";
+                        $uplimittime = "12:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['sundayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 7 || ($_SESSION['today'] == 7 && $_SESSION['classify'] > 11)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 6) || ($_SESSION['today'] == 6 && $_SESSION['classify'] > 11)){
-                            $count = 19;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 6 && $status == 1) || $_SESSION['classify'] > 16 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "13:00:00";
+                        $uplimittime = "17:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['sundayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 7 || ($_SESSION['today'] == 7 && $_SESSION['classify'] > 16)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>
                     <th>
                         <?php
-                        if(($_SESSION['today'] > 6) || ($_SESSION['today'] == 6 && $_SESSION['classify'] > 16)){
-                            $count = 20;//得出下标
-                            $notes = $_SESSION['spenotes'];
-                            $status=((int)substr("$notes","$count",1));
-
-                            if(($_SESSION['today'] > 6 && $status == 1) || $_SESSION['classify'] > 21 && $status == 1){
-                                echo '<i class="fa fa-close no">' . "</i>";
-                            }else if($status == 2){
-                                echo '<i class="fa fa-check yes">' . "</i>";
-                            }
+                        $lowlimittime = "18:00:00";
+                        $uplimittime = "22:00:00";
+                        $result = signInfor($_GET['id'], $_SESSION['sundayymd'], $lowlimittime, $uplimittime);
+                        if($result){
+                            echo '<i class="fa fa-check yes">' . "</i>";
+                        }else if($_SESSION['today'] > 7 || ($_SESSION['today'] == 7 && $_SESSION['classify'] > 21)){
+                            echo '<i class="fa fa-close no">' . "</i>";
                         }
                         ?>
                     </th>

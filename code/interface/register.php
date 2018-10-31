@@ -3,12 +3,13 @@ session_start();
 header("Content-type:text/html;charset=utf-8");
 require_once(dirname(__DIR__) . '/..//global_config.php');
 require_once(APP_ROOT_PATH . '/db_config.php');
-
-if (true) {
-    $date=Array(
-        "status"=>200,
-        "content"=>""
-    );
+$date=Array(
+    "status"=>200,
+    "content"=>"",
+);
+$ip = $_SERVER['REMOTE_ADDR'];
+$ip2 = $_SERVER['HTTP_X_FORWARDED_FOR'];
+if ($ip==IPONE || $ip == IPTWO || $ip2 == IPONE || $ip2 == IPTWO) {
     if (empty($_POST['id']) || empty($_POST['name']) || empty($_POST['direction']) || empty($_POST['password'])) {
         $date["content"]="信息均不能为空";
         echo json_encode($date);
@@ -30,22 +31,8 @@ if (true) {
         echo json_encode($date);
         return;
     } else {
-        date_default_timezone_set("Asia/Shanghai");//计算一周的起始和结束日期
-        $a = date('Y-m-d');
-        $b=((int)substr("$a",2,2));
-        $c=((int)substr("$a",5,2));
-        $d=((int)substr("$a",8,2));
-        $numtime = $b * 10000 + $c * 100 + $d;
-
-        $today=date("w");//判断星期几,周日为0，再减去1
-        if($today == 0)
-        {
-            $today = 6;
-        } else{
-            $today = $today - 1;
-        }
-        $sunday = $numtime + (6 - $today);
-
+        date_default_timezone_set("Asia/Shanghai");
+        $time = strtotime(date('Y-m-d H:i:s'));
         try {
             $dbh = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
             $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -53,13 +40,13 @@ if (true) {
             $password = $_POST['password'];
             $direction = htmlspecialchars($_POST['direction']);
             $name = htmlspecialchars($_POST['name']);
-            $times = 0;
-            $notes = "111111111111111111111";
-            $sqltwo = 'SELECT count(*) FROM students WHERE  id = :id';
-            $test = $dbh->prepare($sqltwo);
-            $test->bindParam(':id', $id);
-            $test->execute();
-            $data = $test->fetch();
+            $confirm = 1;
+
+            $sql = 'SELECT count(*) FROM users WHERE  id = :id';
+            $stmt = $dbh->prepare($sql);
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+            $data = $stmt->fetch();
             $count = $data[0];
             if($count)
             {
@@ -67,18 +54,16 @@ if (true) {
                 echo json_encode($date);
                 return;
             }
-            $sql = 'INSERT INTO students(id, password, direction, name, times, notes, sunday) value (:id, SHA(:password), :direction, :name, :times, :notes, :sunday)';
-            $stmt = $dbh->prepare($sql);
 
-            $stmt->bindParam(':id', $id);
-            $stmt->bindParam(':password', $password);
-            $stmt->bindParam(':direction', $direction);
-            $stmt->bindParam(':name', $name);
-            $stmt->bindParam(':times', $times);
-            $stmt->bindParam(':notes', $notes);
-            $stmt->bindParam(':sunday', $sunday);
-
-            if ($stmt->execute()) {
+            $sqltwo = 'INSERT INTO users(id, password, direction, name, confirm, time) value (:id, SHA(:password), :direction, :name, :confirm, :time)';
+            $stmttwo = $dbh->prepare($sqltwo);
+            $stmttwo->bindParam(':id', $id);
+            $stmttwo->bindParam(':password', $password);
+            $stmttwo->bindParam(':direction', $direction);
+            $stmttwo->bindParam(':name', $name);
+            $stmttwo->bindParam(':confirm', $confirm);
+            $stmttwo->bindParam(':time', $time);
+            if ($stmttwo->execute()) {
                 $date["content"]="注册成功";
                 echo json_encode($date);
                 return;
@@ -95,5 +80,9 @@ if (true) {
             die();
         }
     }
+}else {
+    $date["content"]="请在官方指定地点完成注册";
+    echo json_encode($date);
+    return;
 }
 ?>

@@ -3,7 +3,6 @@ session_start();
 header("Content-type:text/html;charset=utf-8");
 require_once(dirname(__DIR__) . '/global_config.php');
 require_once(APP_ROOT_PATH . '/db_config.php');
-
 if (isset($_POST['submit'])) {
     if (empty($_POST['id']) || empty($_POST['password'])) {
         echo "<script>alert('账号或密码不能为空!')</script>";
@@ -11,87 +10,76 @@ if (isset($_POST['submit'])) {
         try {
             $dbh = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
             $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $sql = 'SELECT * FROM students WHERE id = :id AND password = SHA(:password)';
+            $sql = 'SELECT * FROM users WHERE id = :id AND password = SHA(:password)';
             $stmt = $dbh->prepare($sql);
-            $k = htmlspecialchars($_POST['id']);
-            $stmt->bindParam(':id', $k);
+            $id = htmlspecialchars($_POST['id']);
+            $stmt->bindParam(':id', $id);
             $stmt->bindParam(':password', $_POST['password']);
             if ($stmt->execute()) {
                 if ($row = $stmt->fetch()) {
-                    $_SESSION['id'] = $row['id'];
-                    $_SESSION['name'] = $row['name'];
-                    $_SESSION['times'] = $row['times'];
-                    $_SESSION['notes'] = $row['notes'];
-
-                    date_default_timezone_set("Asia/Shanghai");
-                    $today=date("w");//判断星期几,周日为0，再减去1
-                    if($today == 0)
-                    {
-                        $today = 6;
-                    } else{
-                        $today = $today - 1;
-                    }
-
-                    $date=date('H:i:s');
-                    $classify=((int)substr("$date",0,2));
-
-                    if($classify >= 0){
-                        $now = 0;
-                    }
-
-                    if($classify > 11 && $classify < 17){
-                        $now = 1;
-                    }
-
-                    if($classify > 16){
-                        $now = 2;
-                    }
-
-                    $count = $today * 3 + $now;//计算出下标
-                    $notes = $_SESSION['notes'];
-                    $nowstatus=((int)substr("$notes","$count",1));
-                    $_SESSION['nowstatus'] = $nowstatus;
-                    $_SESSION['classify'] = $classify;
-                    $_SESSION['today'] = $today;
-                    $_SESSION['count'] = $count;
-
-                    $a = date('Y-m-d');
-                    $b=((int)substr("$a",2,2));
-                    $c=((int)substr("$a",5,2));
-                    $d=((int)substr("$a",8,2));
-                    $numtime = $b * 10000 + $c * 100 + $d;
-
-                    if($numtime > $row['sunday']){//自动更新数据库
-                        $sunday = $numtime + (6 - $today);
-                        $notes = "111111111111111111111";
-                        $times = 0;
-
-                        $sql2 = 'UPDATE students SET notes = :notes , times = :times , sunday = :sunday WHERE id = :id';
+                    try {
+                        date_default_timezone_set("Asia/Shanghai");
+                        $timestamp = strtotime(date('Y-m-d H:i:s'));
+                        $time = date('Y-m-d H:i:s');
+                        $sql2 = 'UPDATE users SET time = :time WHERE id = :id';
                         $stmt2 = $dbh->prepare($sql2);
-                        $stmt2->bindParam(':id', $k);
-                        $stmt2->bindParam(':notes', $notes);
-                        $stmt2->bindParam(':times', $times);
-                        $stmt2->bindParam(':sunday', $sunday);
-                        $stmt2->execute();
+                        $stmt2->bindParam(':id', $id);
+                        $stmt2->bindParam(':time', $timestamp);
+                        if ($stmt2->execute()) {
+                            $today = date("N");
+                            $year = ((int)substr("$time", 0, 4));
+                            $month = ((int)substr("$time", 5, 2));
+                            $day = ((int)substr("$time", 8, 2));
+                            $classify = ((int)substr("$time", 11, 2));
+                            $ymd = date('Y-m-d');
+                            $_SESSION['id'] = $row['id'];
+                            $_SESSION['name'] = $row['name'];
+                            $_SESSION['classify'] = $classify;
+                            $_SESSION['ymd'] = $ymd;
+                            $_SESSION['today'] = $today;
+                            $_SESSION['time'] = $timestamp;
 
-                        $_SESSION['notes'] = "111111111111111111111";
-                        $_SESSION['times'] = 0;
+                            $monday = strtotime('this week Monday',time());
+                            $tuesday = strtotime('this week Tuesday',time());
+                            $wednesday = strtotime('this week Wednesday',time());
+                            $thursday = strtotime('this week Thursday',time());
+                            $friday = strtotime('this week Friday',time());
+                            $saturday = strtotime('this week Saturday',time());
+                            $sunday = strtotime('this week Sunday',time());
+                            $lastmonday = strtotime('last week Monday',time());
+                            $mondayymd=date('Y-m-d',"$monday");
+                            $_SESSION['mondayymd'] = $mondayymd;
+                            $tuesdayymd=date('Y-m-d',"$tuesday");
+                            $_SESSION['tuesdayymd'] = $tuesdayymd;
+                            $wednesdayymd=date('Y-m-d',"$wednesday");
+                            $_SESSION['wednesdayymd'] = $wednesdayymd;
+                            $thursdayymd=date('Y-m-d',"$thursday");
+                            $_SESSION['thursdayymd'] = $thursdayymd;
+                            $fridayymd=date('Y-m-d',"$friday");
+                            $_SESSION['fridayymd'] = $fridayymd;
+                            $saturdayymd=date('Y-m-d',"$saturday");
+                            $_SESSION['saturdayymd'] = $saturdayymd;
+                            $sundayymd=date('Y-m-d',"$sunday");
+                            $_SESSION['sundayymd'] = $sundayymd;
+                            $_SESSION['lastmonday'] = $lastmonday;
+
+                            $url = 'index.php';
+                            header('Location: ' . $url);
+                            $dbh = null;
+                        } else {
+                            echo '服务器异常' . $stmt->errorCode();
+                        }
+                    } catch (PDOException $e) {
+                        print "Error!: " . $e->getMessage() . "<br/>";
                     }
-
-                    $url = 'index.php';
-                    header('Location: ' . $url);
                 } else {
                     echo "<script>alert('账号或密码错误!')</script>";
                 }
             } else {
                 echo '服务器异常' . $stmt->errorCode();
             }
-
-            $dbh = null;
-
         } catch (PDOException $e) {
             print "Error!: " . $e->getMessage() . "<br/>";
-            die();
         }
     }
 }
@@ -122,20 +110,22 @@ if (isset($_POST['submit'])) {
 <div class="container" style="z-index: 100">
     <div class="row">
         <div class="col-md-4 col-md-offset-4" id="loginPart">
-            <div class="title">欢迎登陆环创签到系统</div>
+            <div class="title">环创签到系统</div>
             <div class="content">
                 <form method="post" action="<?php echo $_SERVER['PHP_SELF'] ?>">
                     <div class="input-group">
                             <span class="input-group-addon" style="width: 40px;">
                                 <i class="fa fa-user-o"></i>
                             </span>
-                        <input type="text" name="id" class="form-control" placeholder="学号" aria-describedby="basic-addon1">
+                        <input type="text" name="id" class="form-control" placeholder="学号"
+                               aria-describedby="basic-addon1">
                     </div>
                     <div class="input-group">
                             <span class="input-group-addon" style="width: 40px;">
                                 <i class="fa fa-lock"></i>
                             </span>
-                        <input type="password" name="password" class="form-control" placeholder="密码" aria-describedby="basic-addon1">
+                        <input type="password" name="password" class="form-control" placeholder="密码"
+                               aria-describedby="basic-addon1">
                     </div>
                     <button type="submit" id="loginButton" class="btn btn-primary" name="submit">登录</button>
                 </form>
@@ -154,55 +144,58 @@ if (isset($_POST['submit'])) {
             </div>
             <div class="title">环创签到系统注册</div>
             <div class="content">
-                    <div class="input-group">
-                            <span class="input-group-addon"  style="width: 40px;">
+                <div class="input-group">
+                            <span class="input-group-addon" style="width: 40px;">
                                 <i class="fa fa-user-o"></i>
                             </span>
-                        <input type="text" name="id" class="form-control" v-model="stdNum" placeholder="学号" aria-describedby="basic-addon1">
-                    </div>
-                    <div class="input-group" >
+                    <input type="text" name="id" class="form-control" v-model="stdNum" placeholder="学号"
+                           aria-describedby="basic-addon1">
+                </div>
+                <div class="input-group">
                             <span class="input-group-addon" style="width: 40px;">
-                                <i class="fa fa-child"></i>
+                                <i class="fa fa-universal-access"></i>
                             </span>
-                        <input type="text" name="name" class="form-control " v-model="stdName" placeholder="姓名" aria-describedby="basic-addon1">
-                    </div>
-                    <div class="input-group" >
+                    <input type="text" name="name" class="form-control" v-model="stdName" placeholder="姓名"
+                           aria-describedby="basic-addon1">
+                </div>
+                <div class="input-group" >
                             <span class="input-group-addon" style="width: 40px;">
                                 <i class="fa fa-location-arrow"></i>
                             </span>
-                        <div class="ui fluid selection dropdown" style="height: 50px;border-radius: 0px 5px 5px 0px;">
-                            <input type="hidden" name="user">
-                            <i class="dropdown icon" style="line-height: 25px;"></i>
-                            <div class="default text" style="line-height: 25px;color: rgb(173,173,173);">考核方向</div>
-                            <div class="menu">
-                                <div class="item" data-value="桌面端">
-                                    桌面端
-                                </div>
-                                <div class="item" data-value="WEB前端">
-                                    WEB前端
-                                </div>
-                                <div class="item" data-value="WEB后端">
-                                    WEB后端
-                                </div>
-                                <div class="item" data-value="移动端">
-                                    移动端
-                                </div>
-                                <div class="item" data-value="设计端">
-                                    设计端
-                                </div>
-                                <div class="item" data-value="运营部">
-                                    运营部
-                                </div>
+                    <div class="ui fluid selection dropdown" style="height: 50px;border-radius: 0px 5px 5px 0px;">
+                        <input type="hidden" name="user">
+                        <i class="dropdown icon" style="line-height: 25px;"></i>
+                        <div class="default text" style="line-height: 25px;color: rgb(173,173,173);">考核方向</div>
+                        <div class="menu">
+                            <div class="item" data-value="桌面端">
+                                桌面端
+                            </div>
+                            <div class="item" data-value="WEB前端">
+                                WEB前端
+                            </div>
+                            <div class="item" data-value="WEB后端">
+                                WEB后端
+                            </div>
+                            <div class="item" data-value="移动端">
+                                移动端
+                            </div>
+                            <div class="item" data-value="设计端">
+                                设计端
+                            </div>
+                            <div class="item" data-value="运营部">
+                                运营部
                             </div>
                         </div>
                     </div>
-                    <div class="input-group" >
+                </div>
+                <div class="input-group">
                             <span class="input-group-addon" style="width: 40px;">
                                 <i class="fa fa-lock"></i>
                             </span>
-                        <input type="password" name="password" class="form-control" v-model="password" placeholder="密码" aria-describedby="basic-addon1">
-                    </div>
-                    <button type="submit" id="regiterButton" class="btn btn-danger" name="sub">注册</button>
+                    <input type="password" name="password" class="form-control" v-model="password" placeholder="密码"
+                           aria-describedby="basic-addon1">
+                </div>
+                <button type="submit" id="regiterButton" class="btn btn-danger" name="sub">注册</button>
             </div>
         </div>
     </div>
